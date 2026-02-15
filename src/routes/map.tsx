@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { fetchAllData } from '../data/fetch'
 import { getNeighborhood } from '../data/neighborhoods'
+import { housingConnectMapOptions } from '../data/nyc-open-data'
 import type { Building } from '../types'
 import { BuildingMap } from '../components/map/BuildingMap'
 import { BuildingMapMarkers } from '../components/map/BuildingMapMarkers'
+import { HousingConnectMapLayer } from '../components/map/HousingConnectMapLayer'
 import { MapLegend } from '../components/map/MapLegend'
 import { MapFilters } from '../components/map/MapFilters'
 import { SubwayLinesLayer } from '../components/map/SubwayLinesLayer'
@@ -21,6 +24,11 @@ function MapPage() {
   const [neighborhoodFilters, setNeighborhoodFilters] = useState<Set<string>>(new Set())
   const [zipFilter, setZipFilter] = useState('')
   const [showSubway, setShowSubway] = useState(false)
+  const [showHousingConnect, setShowHousingConnect] = useState(false)
+  const { data: hcMap } = useQuery({
+    ...housingConnectMapOptions(),
+    enabled: showHousingConnect,
+  })
 
   useEffect(() => {
     fetchAllData()
@@ -68,10 +76,16 @@ function MapPage() {
     <div className="relative" style={{ height: 'calc(100vh - 64px)' }}>
       <BuildingMap>
         <BuildingMapMarkers buildings={filtered} />
+        {showHousingConnect && <HousingConnectMapLayer buildings={allBuildings} />}
         {showSubway && <SubwayLinesLayer />}
       </BuildingMap>
 
-      <MapLayerToggle showSubway={showSubway} onToggle={setShowSubway} />
+      <MapLayerToggle
+        showSubway={showSubway}
+        onToggleSubway={setShowSubway}
+        showHousingConnect={showHousingConnect}
+        onToggleHousingConnect={setShowHousingConnect}
+      />
 
       <MapFilters
         allBuildings={allBuildings}
@@ -84,7 +98,11 @@ function MapPage() {
         onZipChange={setZipFilter}
       />
 
-      <MapLegend buildingCount={filtered.length} />
+      <MapLegend
+        buildingCount={filtered.length}
+        showHousingConnect={showHousingConnect}
+        housingConnectCount={hcMap?.size}
+      />
     </div>
   )
 }
