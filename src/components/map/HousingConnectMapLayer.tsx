@@ -8,18 +8,24 @@ import type { HousingConnectLottery } from '../../data/nyc-open-data'
 import type { Building } from '../../types'
 
 const HC_GREEN = '#22c55e'
+const HC_GRAY = '#6b7280'
 
-function createHcIcon(size = 10): L.DivIcon {
+function createHcIcon(color: string, size = 10): L.DivIcon {
+  const glow = color === HC_GREEN ? `box-shadow:0 0 6px ${HC_GREEN};` : ''
   return L.divIcon({
     className: 'building-marker',
-    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${HC_GREEN};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 6px ${HC_GREEN};"></div>`,
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.5);${glow}"></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   })
 }
 
+function isActiveLottery(l: HousingConnectLottery) {
+  return l.lottery_status?.toLowerCase().includes('active')
+}
+
 function hasActiveLottery(lotteries: HousingConnectLottery[]) {
-  return lotteries.some(l => l.lottery_status?.toLowerCase().includes('active'))
+  return lotteries.some(isActiveLottery)
 }
 
 function formatDate(iso: string | undefined) {
@@ -49,9 +55,11 @@ function buildPopup(building: Building, lotteries: HousingConnectLottery[]) {
 
 interface Props {
   buildings: Building[]
+  showActive: boolean
+  showInactive: boolean
 }
 
-export function HousingConnectMapLayer({ buildings }: Props) {
+export function HousingConnectMapLayer({ buildings, showActive, showInactive }: Props) {
   const map = useMap()
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null)
   const { data: hcMap } = useQuery(housingConnectMapOptions())
@@ -80,8 +88,10 @@ export function HousingConnectMapLayer({ buildings }: Props) {
       iconCreateFunction: (c) => {
         const count = c.getChildCount()
         const diameter = count < 20 ? 28 : count < 100 ? 36 : 44
+        // Use green cluster if showing active, gray if only inactive
+        const clusterClass = showActive ? 'hc-cluster' : 'hc-cluster-inactive'
         return L.divIcon({
-          html: `<div class="cluster-marker hc-cluster"><span>${count.toLocaleString()}</span></div>`,
+          html: `<div class="cluster-marker ${clusterClass}"><span>${count.toLocaleString()}</span></div>`,
           className: 'custom-cluster-icon',
           iconSize: L.point(diameter, diameter),
         })
@@ -94,8 +104,17 @@ export function HousingConnectMapLayer({ buildings }: Props) {
       const building = bblToBuilding.get(bbl)
       if (!building) continue
 
+      const active = hasActiveLottery(lotteries)
+
+      // Filter based on active/inactive toggles
+      if (active && !showActive) continue
+      if (!active && !showInactive) continue
+
+      const color = active ? HC_GREEN : HC_GRAY
+      const size = active ? 12 : 9
+
       const marker = L.marker([building.la!, building.lo!], {
-        icon: createHcIcon(hasActiveLottery(lotteries) ? 12 : 9),
+        icon: createHcIcon(color, size),
       })
 
       marker.bindPopup(buildPopup(building, lotteries), {
@@ -118,7 +137,7 @@ export function HousingConnectMapLayer({ buildings }: Props) {
         clusterRef.current = null
       }
     }
-  }, [hcMap, buildings, map])
+  }, [hcMap, buildings, map, showActive, showInactive])
 
   return null
 }

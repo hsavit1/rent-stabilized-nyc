@@ -24,10 +24,12 @@ function MapPage() {
   const [neighborhoodFilters, setNeighborhoodFilters] = useState<Set<string>>(new Set())
   const [zipFilter, setZipFilter] = useState('')
   const [showSubway, setShowSubway] = useState(false)
-  const [showHousingConnect, setShowHousingConnect] = useState(false)
+  const [showHcActive, setShowHcActive] = useState(false)
+  const [showHcInactive, setShowHcInactive] = useState(false)
+  const showAnyHc = showHcActive || showHcInactive
   const { data: hcMap } = useQuery({
     ...housingConnectMapOptions(),
-    enabled: showHousingConnect,
+    enabled: showAnyHc,
   })
 
   useEffect(() => {
@@ -76,15 +78,17 @@ function MapPage() {
     <div className="relative" style={{ height: 'calc(100vh - 64px)' }}>
       <BuildingMap>
         <BuildingMapMarkers buildings={filtered} />
-        {showHousingConnect && <HousingConnectMapLayer buildings={allBuildings} />}
+        {showAnyHc && <HousingConnectMapLayer buildings={allBuildings} showActive={showHcActive} showInactive={showHcInactive} />}
         {showSubway && <SubwayLinesLayer />}
       </BuildingMap>
 
       <MapLayerToggle
         showSubway={showSubway}
         onToggleSubway={setShowSubway}
-        showHousingConnect={showHousingConnect}
-        onToggleHousingConnect={setShowHousingConnect}
+        showHcActive={showHcActive}
+        onToggleHcActive={setShowHcActive}
+        showHcInactive={showHcInactive}
+        onToggleHcInactive={setShowHcInactive}
       />
 
       <MapFilters
@@ -100,7 +104,8 @@ function MapPage() {
 
       <MapLegend
         buildingCount={filtered.length}
-        showHousingConnect={showHousingConnect}
+        showHcActive={showHcActive}
+        showHcInactive={showHcInactive}
         housingConnectCount={hcMap?.size}
       />
     </div>
