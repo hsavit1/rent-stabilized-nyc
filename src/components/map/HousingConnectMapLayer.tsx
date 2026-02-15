@@ -51,7 +51,7 @@ function buildPopup(lottery: HousingConnectLottery) {
       ${units ? `<div style="color:${active ? HC_GREEN : '#9ca3af'};font-weight:600;margin:2px 0;">${units} unit${units !== 1 ? 's' : ''}</div>` : ''}
       ${lottery.development_type ? `<div class="popup-detail">${lottery.development_type}</div>` : ''}
       ${lottery.lottery_end_date ? `<div class="popup-detail">Deadline: ${formatDate(lottery.lottery_end_date)}</div>` : ''}
-      ${active ? `<a href="https://housingconnect.nyc.gov" target="_blank" rel="noopener noreferrer" class="popup-link" style="color:${HC_GREEN};">Apply on Housing Connect &rarr;</a>` : ''}
+      ${active ? `<a href="https://housingconnect.nyc.gov/PublicWeb/details/${lottery.lottery_id}" target="_blank" rel="noopener noreferrer" class="popup-link" style="color:${HC_GREEN};">Apply on Housing Connect &rarr;</a>` : ''}
     </div>
   `
 }
