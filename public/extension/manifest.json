@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "DHCR Auto-Fill for NYC Rent Stabilized",
+  "version": "1.0.0",
+  "description": "Automatically fills the DHCR Building Search form when opened from rent-stabilized-nyc.fly.dev",
+  "content_scripts": [
+    {
+      "matches": ["https://apps.hcr.ny.gov/BuildingSearch/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "dhcr-autofill@rent-stabilized-nyc.fly.dev"
+    }
+  },
+  "icons": {
+    "48": "icon-48.svg",
+    "96": "icon-96.svg"
+  },
+  "permissions": []
+}

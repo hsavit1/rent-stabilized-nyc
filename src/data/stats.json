@@ -1,0 +1,200 @@
+{
+  "totalBuildings": 46113,
+  "totalStabilizedUnits": 922196,
+  "byBorough": {
+    "Bronx": {
+      "buildings": 6618,
+      "units": 226886
+    },
+    "Brooklyn": {
+      "buildings": 16487,
+      "units": 266791
+    },
+    "Manhattan": {
+      "buildings": 15016,
+      "units": 260813
+    },
+    "Queens": {
+      "buildings": 7750,
+      "units": 159368
+    },
+    "Staten Island": {
+      "buildings": 242,
+      "units": 8338
+    }
+  },
+  "topZipcodes": [
+    {
+      "zipcode": "11226",
+      "buildings": 809,
+      "units": 25872,
+      "borough": "Brooklyn"
+    },
+    {
+      "zipcode": "10467",
+      "buildings": 594,
+      "units": 21827,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "10458",
+      "buildings": 777,
+      "units": 21356,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "10452",
+      "buildings": 410,
+      "units": 20351,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "10468",
+      "buildings": 514,
+      "units": 20038,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "10453",
+      "buildings": 442,
+      "units": 19362,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "10456",
+      "buildings": 542,
+      "units": 16956,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "10457",
+      "buildings": 499,
+      "units": 16712,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "10025",
+      "buildings": 802,
+      "units": 14944,
+      "borough": "Manhattan"
+    },
+    {
+      "zipcode": "11225",
+      "buildings": 450,
+      "units": 14718,
+      "borough": "Brooklyn"
+    },
+    {
+      "zipcode": "10009",
+      "buildings": 584,
+      "units": 14222,
+      "borough": "Manhattan"
+    },
+    {
+      "zipcode": "10032",
+      "buildings": 495,
+      "units": 13688,
+      "borough": "Manhattan"
+    },
+    {
+      "zipcode": "10033",
+      "buildings": 452,
+      "units": 13639,
+      "borough": "Manhattan"
+    },
+    {
+      "zipcode": "11230",
+      "buildings": 381,
+      "units": 12658,
+      "borough": "Brooklyn"
+    },
+    {
+      "zipcode": "10040",
+      "buildings": 306,
+      "units": 11815,
+      "borough": "Manhattan"
+    },
+    {
+      "zipcode": "10031",
+      "buildings": 570,
+      "units": 11584,
+      "borough": "Manhattan"
+    },
+    {
+      "zipcode": "10463",
+      "buildings": 295,
+      "units": 11432,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "10034",
+      "buildings": 305,
+      "units": 10790,
+      "borough": "Manhattan"
+    },
+    {
+      "zipcode": "10460",
+      "buildings": 333,
+      "units": 10692,
+      "borough": "Bronx"
+    },
+    {
+      "zipcode": "11213",
+      "buildings": 517,
+      "units": 10690,
+      "borough": "Brooklyn"
+    },
+    {
+      "zipcode": "11209",
+      "buildings": 583,
+      "units": 10262,
+      "borough": "Brooklyn"
+    },
+    {
+      "zipcode": "11373",
+      "buildings": 325,
+      "units": 9975,
+      "borough": "Queens"
+    },
+    {
+      "zipcode": "11355",
+      "buildings": 205,
+      "units": 9850,
+      "borough": "Queens"
+    },
+    {
+      "zipcode": "10019",
+      "buildings": 426,
+      "units": 9769,
+      "borough": "Manhattan"
+    },
+    {
+      "zipcode": "11235",
+      "buildings": 247,
+      "units": 9709,
+      "borough": "Brooklyn"
+    }
+  ],
+  "yearBuiltDistribution": {
+    "1800": 2,
+    "1830": 8,
+    "1840": 20,
+    "1850": 33,
+    "1860": 8,
+    "1870": 8,
+    "1880": 40,
+    "1890": 127,
+    "1900": 6304,
+    "1910": 7900,
+    "1920": 13605,
+    "1930": 10806,
+    "1940": 1137,
+    "1950": 1303,
+    "1960": 1392,
+    "1970": 363,
+    "1980": 176,
+    "1990": 248,
+    "2000": 1832,
+    "2010": 425
+  }
+}
