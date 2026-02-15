@@ -78,7 +78,7 @@ function MapPage() {
     <div className="relative" style={{ height: 'calc(100vh - 64px)' }}>
       <BuildingMap>
         <BuildingMapMarkers buildings={filtered} />
-        {showAnyHc && <HousingConnectMapLayer buildings={allBuildings} showActive={showHcActive} showInactive={showHcInactive} />}
+        {showAnyHc && <HousingConnectMapLayer showActive={showHcActive} showInactive={showHcInactive} />}
         {showSubway && <SubwayLinesLayer />}
       </BuildingMap>
 
@@ -106,7 +106,7 @@ function MapPage() {
         buildingCount={filtered.length}
         showHcActive={showHcActive}
         showHcInactive={showHcInactive}
-        housingConnectCount={hcMap?.size}
+        housingConnectCount={hcMap?.length}
       />
     </div>
   )

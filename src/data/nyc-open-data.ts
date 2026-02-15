@@ -123,6 +123,8 @@ export interface HousingConnectLottery {
   unit_distribution_4bed: string
   borough: string
   postcode: string
+  latitude: string
+  longitude: string
 }
 
 async function fetchHousingConnectLotteries(bbl: string) {
@@ -153,78 +155,28 @@ export function housingConnectOptions(bbl: string) {
   })
 }
 
-/** Fetch all HC building BBLs + lottery details for the map layer */
-export interface HousingConnectMapEntry {
-  bbl: string
-  lotteries: HousingConnectLottery[]
-}
-
-async function fetchAllHousingConnectForMap(): Promise<Map<string, HousingConnectLottery[]>> {
-  // Fetch all HC buildings (paginate — dataset may have several thousand rows)
-  const allBuildings: HousingConnectBuilding[] = []
+/** Fetch all lotteries for the map layer — they have lat/lng directly */
+async function fetchAllLotteriesForMap(): Promise<HousingConnectLottery[]> {
+  const all: HousingConnectLottery[] = []
   let offset = 0
   const pageSize = 2000
   while (true) {
-    const page = await socrataFetch<HousingConnectBuilding>('nibs-na6y', {
-      $select: 'lottery_id,address_bbl',
+    const page = await socrataFetch<HousingConnectLottery>('vy5i-a666', {
       $limit: String(pageSize),
       $offset: String(offset),
     })
-    allBuildings.push(...page)
+    all.push(...page)
     if (page.length < pageSize) break
     offset += pageSize
   }
-
-  if (allBuildings.length === 0) return new Map()
-
-  // Build BBL -> lottery_id[] map
-  const bblToLotteryIds = new Map<string, Set<string>>()
-  for (const b of allBuildings) {
-    if (!b.address_bbl || !b.lottery_id) continue
-    let set = bblToLotteryIds.get(b.address_bbl)
-    if (!set) {
-      set = new Set()
-      bblToLotteryIds.set(b.address_bbl, set)
-    }
-    set.add(b.lottery_id)
-  }
-
-  // Fetch all unique lotteries
-  const uniqueIds = [...new Set(allBuildings.map(b => b.lottery_id).filter(Boolean))]
-  const lotteries: HousingConnectLottery[] = []
-  // Fetch in batches to avoid overly long WHERE clauses
-  for (let i = 0; i < uniqueIds.length; i += 100) {
-    const batch = uniqueIds.slice(i, i + 100)
-    const inClause = batch.map(id => `'${id}'`).join(',')
-    const page = await socrataFetch<HousingConnectLottery>('vy5i-a666', {
-      $where: `lottery_id in(${inClause})`,
-      $limit: '200',
-    })
-    lotteries.push(...page)
-  }
-
-  const lotteryMap = new Map<string, HousingConnectLottery>()
-  for (const l of lotteries) {
-    lotteryMap.set(l.lottery_id, l)
-  }
-
-  // Build BBL -> lotteries result
-  const result = new Map<string, HousingConnectLottery[]>()
-  for (const [bbl, ids] of bblToLotteryIds) {
-    const matched = [...ids].map(id => lotteryMap.get(id)).filter(Boolean) as HousingConnectLottery[]
-    if (matched.length > 0) {
-      result.set(bbl, matched)
-    }
-  }
-
-  return result
+  return all
 }
 
 export function housingConnectMapOptions() {
   return queryOptions({
     queryKey: ['housing-connect-map'],
-    queryFn: fetchAllHousingConnectForMap,
-    staleTime: 1000 * 60 * 30, // cache 30 min
+    queryFn: fetchAllLotteriesForMap,
+    staleTime: 1000 * 60 * 30,
   })
 }
 
