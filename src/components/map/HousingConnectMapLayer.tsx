@@ -10,11 +10,21 @@ import type { Building } from '../../types'
 const HC_GREEN = '#22c55e'
 const HC_GRAY = '#6b7280'
 
-function createHcIcon(color: string, size = 10): L.DivIcon {
-  const glow = color === HC_GREEN ? `box-shadow:0 0 6px ${HC_GREEN};` : ''
+function createActiveIcon(): L.DivIcon {
+  const size = 18
   return L.divIcon({
     className: 'building-marker',
-    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.5);${glow}"></div>`,
+    html: `<div class="hc-active-marker"><div class="hc-active-ping"></div><div class="hc-active-dot"></div></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  })
+}
+
+function createInactiveIcon(): L.DivIcon {
+  const size = 8
+  return L.divIcon({
+    className: 'building-marker',
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${HC_GRAY};border:1px solid rgba(255,255,255,0.3);"></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   })
@@ -110,11 +120,9 @@ export function HousingConnectMapLayer({ buildings, showActive, showInactive }: 
       if (active && !showActive) continue
       if (!active && !showInactive) continue
 
-      const color = active ? HC_GREEN : HC_GRAY
-      const size = active ? 12 : 9
-
       const marker = L.marker([building.la!, building.lo!], {
-        icon: createHcIcon(color, size),
+        icon: active ? createActiveIcon() : createInactiveIcon(),
+        zIndexOffset: active ? 1000 : 0,
       })
 
       marker.bindPopup(buildPopup(building, lotteries), {
