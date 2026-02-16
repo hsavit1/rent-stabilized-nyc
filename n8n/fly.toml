@@ -10,7 +10,7 @@ primary_region = 'ewr'
   GENERIC_TIMEZONE = "America/New_York"
   N8N_DIAGNOSTICS_ENABLED = "false"
   N8N_PERSONALIZATION_ENABLED = "false"
-  NODE_FUNCTION_ALLOW_EXTERNAL = "puppeteer"
+  NODE_FUNCTION_ALLOW_EXTERNAL = "puppeteer,puppeteer-extra,puppeteer-extra-plugin-stealth"
 
 [http_service]
   internal_port = 5678
