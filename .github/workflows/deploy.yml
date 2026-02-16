@@ -3,17 +3,49 @@ name: Deploy to Fly.io
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy
+  detect-n8n-changes:
+    name: Detect n8n Changes
     runs-on: ubuntu-latest
-    concurrency: deploy-group
+    outputs:
+      n8n_changed: ${{ steps.filter.outputs.n8n }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            n8n:
+              - 'n8n/**'
+
+  deploy-web:
+    name: Deploy Web App
+    runs-on: ubuntu-latest
+    concurrency: deploy-web-group
     steps:
       - uses: actions/checkout@v4
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - run: flyctl deploy --remote-only
+      - run: flyctl deploy --remote-only --config fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-n8n:
+    name: Deploy n8n App
+    runs-on: ubuntu-latest
+    needs: detect-n8n-changes
+    if: github.event_name == 'workflow_dispatch' || needs.detect-n8n-changes.outputs.n8n_changed == 'true'
+    concurrency: deploy-n8n-group
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - run: flyctl deploy --remote-only --config n8n/fly.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
