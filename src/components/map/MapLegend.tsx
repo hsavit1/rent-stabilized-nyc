@@ -11,7 +11,7 @@ export function MapLegend({ buildingCount, showHcActive, showHcInactive, housing
   const showAnyHc = showHcActive || showHcInactive
 
   return (
-    <div className="absolute bottom-6 left-4 z-[1000] bg-gray-900/95 border border-gray-800 rounded-xl p-4 backdrop-blur-sm">
+    <div className="absolute bottom-6 left-4 z-[400] bg-gray-900/95 border border-gray-800 rounded-xl p-4 backdrop-blur-sm">
       <div className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
         Boroughs
       </div>
@@ -42,7 +42,7 @@ export function MapLegend({ buildingCount, showHcActive, showHcInactive, housing
           )}
           {housingConnectCount != null && housingConnectCount > 0 && (
             <div className="text-xs text-gray-500 ml-[18px]">
-              {housingConnectCount.toLocaleString()} buildings with lotteries
+              {housingConnectCount.toLocaleString()} active lotteries
             </div>
           )}
         </div>

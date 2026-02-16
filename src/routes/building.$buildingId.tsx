@@ -9,6 +9,7 @@ import { HousingConnectSection } from '../components/building/HousingConnectSect
 import { HpdViolationsSection } from '../components/building/HpdViolationsSection'
 import { HpdRegistrationsSection } from '../components/building/HpdRegistrationsSection'
 import { DobPermitsSection } from '../components/building/DobPermitsSection'
+import { BuildingTrackingSection } from '../components/building/BuildingTrackingSection'
 import type { Building } from '../types'
 
 export const Route = createFileRoute('/building/$buildingId')({
@@ -121,6 +122,9 @@ function BuildingPage() {
           )}
         </div>
       )}
+
+      {/* Building Tracking */}
+      <BuildingTrackingSection buildingId={building.i} />
 
       {/* Find Availability Callout */}
       <FindAvailabilityCard building={building} />

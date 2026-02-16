@@ -115,12 +115,26 @@ export interface HousingConnectLottery {
   development_type: string
   lottery_start_date: string
   lottery_end_date: string
+  building_count: string
   unit_count: string
   unit_distribution_studio: string
   unit_distribution_1bed: string
   unit_distribution_2bed: string
   unit_distribution_3bed: string
   unit_distribution_4bed: string
+  applied_income_ami_ext_low: string
+  applied_income_ami_very_low: string
+  applied_income_ami_low: string
+  applied_income_ami_moderate: string
+  applied_income_ami_middle: string
+  applied_income_ami_above: string
+  lottery_mobility_percent: string
+  lottery_vision_hearing_percent: string
+  lottery_community_board_percent: string
+  lottery_municipal_employee_percent: string
+  lottery_nycha_percent: string
+  lottery_62_percent: string
+  community_board: string
   borough: string
   postcode: string
   latitude: string
@@ -177,6 +191,31 @@ export function housingConnectMapOptions() {
     queryKey: ['housing-connect-map'],
     queryFn: fetchAllLotteriesForMap,
     staleTime: 1000 * 60 * 30,
+  })
+}
+
+/** Fetch only active lotteries, ordered by deadline soonest first */
+async function fetchActiveLotteries(): Promise<HousingConnectLottery[]> {
+  return socrataFetch<HousingConnectLottery>('vy5i-a666', {
+    $where: "lottery_status='Active'",
+    $order: 'lottery_end_date ASC',
+    $limit: '500',
+  })
+}
+
+export function activeLotteriesOptions() {
+  return queryOptions({
+    queryKey: ['housing-connect-active'],
+    queryFn: fetchActiveLotteries,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  })
+}
+
+export function allLotteriesOptions() {
+  return queryOptions({
+    queryKey: ['housing-connect-all'],
+    queryFn: fetchAllLotteriesForMap,
+    staleTime: 1000 * 60 * 30, // 30 minutes
   })
 }
 

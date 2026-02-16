@@ -178,6 +178,34 @@
   color: #fcd34d;
 }
 
+.building-popup .popup-track-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 0;
+  background: #f59e0b;
+  color: #111827;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.building-popup .popup-track-btn:hover:not(:disabled) {
+  background: #fbbf24;
+}
+
+.building-popup .popup-track-btn:disabled {
+  cursor: default;
+}
+
+.building-popup .popup-track-btn.popup-track-done {
+  background: #374151;
+  color: #22c55e;
+}
+
 /* Dark zoom controls */
 .leaflet-control-zoom a {
   background-color: #111827 !important;
@@ -198,4 +226,38 @@
 
 .leaflet-control-attribution a {
   color: #9ca3af !important;
+}
+
+/* Closing soon pulse animation for lottery cards */
+.closing-soon-pulse {
+  animation: closing-pulse 2s ease-in-out infinite;
+}
+
+@keyframes closing-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Kanban drag-and-drop styles */
+[data-dnd-dragging] {
+  cursor: grabbing !important;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+dialog[open] {
+  animation: dialog-in 0.15s ease-out;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

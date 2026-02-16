@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAllData } from '../data/fetch'
 import { getNeighborhood } from '../data/neighborhoods'
 import { housingConnectMapOptions } from '../data/nyc-open-data'
+import { isActive } from '../data/lottery-helpers'
 import { trackedBuildingsOptions } from '../data/tracking-queries'
 import { upsertBuildingTracking } from '../data/tracking'
 import { useSession } from '../lib/auth-client'
@@ -182,7 +183,7 @@ function MapPage() {
         buildingCount={filtered.length}
         showHcActive={showHcActive}
         showHcInactive={showHcInactive}
-        housingConnectCount={hcMap?.length}
+        housingConnectCount={hcMap?.filter(l => isActive(l)).length}
       />
     </div>
   )

@@ -1,12 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { housingConnectOptions } from '../../data/nyc-open-data'
 import type { HousingConnectLottery } from '../../data/nyc-open-data'
-
-function formatDate(iso: string | undefined) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
+import { isActive, formatDate, bedroomBreakdown, incomeTiers, preferences } from '../../data/lottery-helpers'
 
 function statusBadge(status: string) {
   const s = status?.toLowerCase() ?? ''
@@ -15,23 +10,6 @@ function statusBadge(status: string) {
   if (s.includes('tenant selection'))
     return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">Tenant Selection</span>
   return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/20 text-gray-400 border border-gray-500/30">{status || 'Closed'}</span>
-}
-
-function bedroomBreakdown(lottery: HousingConnectLottery) {
-  const beds = [
-    { label: 'Studio', count: lottery.unit_distribution_studio },
-    { label: '1BR', count: lottery.unit_distribution_1bed },
-    { label: '2BR', count: lottery.unit_distribution_2bed },
-    { label: '3BR', count: lottery.unit_distribution_3bed },
-    { label: '4BR', count: lottery.unit_distribution_4bed },
-  ].filter(b => b.count && Number(b.count) > 0)
-
-  if (beds.length === 0) return null
-  return beds.map(b => `${b.count} ${b.label}`).join(' · ')
-}
-
-function isActive(lottery: HousingConnectLottery) {
-  return lottery.lottery_status?.toLowerCase().includes('active')
 }
 
 export function HousingConnectSection({ bbl }: { bbl: string }) {
@@ -71,6 +49,8 @@ export function HousingConnectSection({ bbl }: { bbl: string }) {
 function LotteryCard({ lottery, muted }: { lottery: HousingConnectLottery; muted?: boolean }) {
   const breakdown = bedroomBreakdown(lottery)
   const unitCount = lottery.unit_count ? Number(lottery.unit_count) : null
+  const tiers = incomeTiers(lottery)
+  const prefs = preferences(lottery)
 
   return (
     <div className={`px-6 py-4 ${muted ? 'opacity-60' : ''}`}>
@@ -100,6 +80,32 @@ function LotteryCard({ lottery, muted }: { lottery: HousingConnectLottery; muted
           <span>Deadline {formatDate(lottery.lottery_end_date)}</span>
         )}
       </div>
+
+      {tiers.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-green-500/10">
+          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Income Tiers</p>
+          <div className="flex flex-wrap gap-1.5">
+            {tiers.map(t => (
+              <span key={t.label} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/10 text-[11px] text-green-300 border border-green-500/20">
+                <span className="font-semibold">{t.count}</span> {t.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {prefs.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-green-500/10">
+          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Set-Aside Preferences</p>
+          <div className="flex flex-wrap gap-1.5">
+            {prefs.map(p => (
+              <span key={p.label} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 text-[11px] text-amber-300 border border-amber-500/20">
+                {p.label} <span className="font-semibold">{p.pct}%</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <a
         href={`https://housingconnect.nyc.gov/PublicWeb/details/${lottery.lottery_id}`}

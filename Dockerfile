@@ -5,9 +5,11 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine
-COPY --from=build /app/dist/client /usr/share/nginx/html
-RUN mv /usr/share/nginx/html/_shell.html /usr/share/nginx/html/index.html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM node:22-alpine
+WORKDIR /app
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/start-server.js ./start-server.js
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "start-server.js"]

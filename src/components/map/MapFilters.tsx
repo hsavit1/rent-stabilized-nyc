@@ -49,7 +49,7 @@ export function MapFilters({
   const hasFilters = boroughFilter || neighborhoodFilters.size > 0 || zipFilter
 
   return (
-    <div className="absolute top-4 left-4 z-[1000] bg-gray-900/95 border border-gray-800 rounded-xl p-4 backdrop-blur-sm">
+    <div className="absolute top-4 left-4 z-[400] bg-gray-900/95 border border-gray-800 rounded-xl p-4 backdrop-blur-sm">
       <div className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">
         Filters
       </div>

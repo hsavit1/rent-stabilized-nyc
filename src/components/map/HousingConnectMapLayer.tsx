@@ -5,6 +5,7 @@ import 'leaflet.markercluster'
 import { useQuery } from '@tanstack/react-query'
 import { housingConnectMapOptions } from '../../data/nyc-open-data'
 import type { HousingConnectLottery } from '../../data/nyc-open-data'
+import { isActive, formatDate, bedroomBreakdown, incomeTiers, preferences } from '../../data/lottery-helpers'
 
 const HC_GREEN = '#22c55e'
 const HC_GRAY = '#6b7280'
@@ -29,20 +30,28 @@ function createInactiveIcon(): L.DivIcon {
   })
 }
 
-function isActive(l: HousingConnectLottery) {
-  return l.lottery_status?.toLowerCase().includes('active')
-}
-
-function formatDate(iso: string | undefined) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-function buildPopup(lottery: HousingConnectLottery) {
+function buildPopup(lottery: HousingConnectLottery, isLoggedIn: boolean, trackedIds?: Set<string>) {
   const active = isActive(lottery)
   const statusLabel = active ? 'Active Lottery' : lottery.lottery_status || 'Past Lottery'
   const units = Number(lottery.unit_count) || 0
+  const trackId = `hc:${lottery.lottery_id}`
+  const alreadyTracked = trackedIds?.has(trackId)
+
+  const trackButton = isLoggedIn
+    ? alreadyTracked
+      ? `<button class="popup-track-btn popup-track-done" disabled data-track-id="${trackId}">Applied</button>`
+      : `<button class="popup-track-btn" data-track-id="${trackId}" onclick="window.__trackBuilding('${trackId}','applied')">Mark Applied</button>`
+    : ''
+
+  const beds = bedroomBreakdown(lottery) || ''
+  const tiers = incomeTiers(lottery)
+  const ami = tiers.length > 0 ? tiers.map(t => `${t.count} @ ${t.label.match(/\((.+)\)/)?.[1] || t.label}`).join(' · ') : ''
+  const prefsArr = preferences(lottery)
+  const prefs = prefsArr.length > 0 ? prefsArr.map(p => `${p.label} ${p.pct}%`).join(' · ') : ''
+
+  const sectionStyle = 'margin-top:6px;padding-top:5px;border-top:1px solid #1f2937;'
+  const labelStyle = 'color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;'
+  const valueStyle = 'color:#d1d5db;font-size:11px;line-height:1.4;'
 
   return `
     <div class="building-popup">
@@ -51,7 +60,12 @@ function buildPopup(lottery: HousingConnectLottery) {
       ${units ? `<div style="color:${active ? HC_GREEN : '#9ca3af'};font-weight:600;margin:2px 0;">${units} unit${units !== 1 ? 's' : ''}</div>` : ''}
       ${lottery.development_type ? `<div class="popup-detail">${lottery.development_type}</div>` : ''}
       ${lottery.lottery_end_date ? `<div class="popup-detail">Deadline: ${formatDate(lottery.lottery_end_date)}</div>` : ''}
+      ${beds ? `<div style="${sectionStyle}"><div style="${labelStyle}">Bedrooms</div><div style="${valueStyle}">${beds}</div></div>` : ''}
+      ${ami ? `<div style="${sectionStyle}"><div style="${labelStyle}">Income Tiers</div><div style="${valueStyle}">${ami}</div></div>` : ''}
+      ${prefs ? `<div style="${sectionStyle}"><div style="${labelStyle}">Set-Asides</div><div style="${valueStyle}">${prefs}</div></div>` : ''}
+      ${lottery.lottery_id ? `<div class="popup-lottery-id" style="margin-top:6px;display:flex;align-items:center;gap:4px;"><span style="color:#9ca3af;font-size:11px;">Lottery #</span><code style="color:#fff;background:#1f2937;padding:1px 6px;border-radius:4px;font-size:12px;user-select:all;cursor:text;">${lottery.lottery_id}</code><button onclick="navigator.clipboard.writeText('${lottery.lottery_id}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)" style="background:none;border:1px solid #374151;color:#9ca3af;font-size:10px;padding:1px 6px;border-radius:4px;cursor:pointer;">Copy</button></div>` : ''}
       ${active ? `<a href="https://housingconnect.nyc.gov/PublicWeb/details/${lottery.lottery_id}" target="_blank" rel="noopener noreferrer" class="popup-link" style="color:${HC_GREEN};">Apply on Housing Connect &rarr;</a>` : ''}
+      ${trackButton}
     </div>
   `
 }
@@ -59,9 +73,11 @@ function buildPopup(lottery: HousingConnectLottery) {
 interface Props {
   showActive: boolean
   showInactive: boolean
+  isLoggedIn?: boolean
+  trackedIds?: Set<string>
 }
 
-export function HousingConnectMapLayer({ showActive, showInactive }: Props) {
+export function HousingConnectMapLayer({ showActive, showInactive, isLoggedIn = false, trackedIds }: Props) {
   const map = useMap()
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null)
   const { data: lotteries } = useQuery(housingConnectMapOptions())
@@ -107,8 +123,8 @@ export function HousingConnectMapLayer({ showActive, showInactive }: Props) {
         zIndexOffset: active ? 2000 : 0,
       })
 
-      marker.bindPopup(buildPopup(lottery), {
-        maxWidth: 280,
+      marker.bindPopup(buildPopup(lottery, isLoggedIn, trackedIds), {
+        maxWidth: 320,
         className: 'dark-popup',
       })
 
@@ -139,7 +155,7 @@ export function HousingConnectMapLayer({ showActive, showInactive }: Props) {
       map.removeLayer(inactiveCluster)
       clusterRef.current = null
     }
-  }, [lotteries, map, showActive, showInactive])
+  }, [lotteries, map, showActive, showInactive, isLoggedIn, trackedIds])
 
   return null
 }

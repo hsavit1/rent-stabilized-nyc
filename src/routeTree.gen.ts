@@ -12,6 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MapRouteImport } from './routes/map'
+import { Route as LotteriesRouteImport } from './routes/lotteries'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BuildingBuildingIdRouteImport } from './routes/building.$buildingId'
@@ -30,6 +34,26 @@ const PricingRoute = PricingRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LotteriesRoute = LotteriesRouteImport.update({
+  id: '/lotteries',
+  path: '/lotteries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -56,6 +80,10 @@ const BoroughBoroughSlugRoute = BoroughBoroughSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/browse': typeof BrowseRoute
+  '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
+  '/lotteries': typeof LotteriesRoute
   '/map': typeof MapRoute
   '/pricing': typeof PricingRoute
   '/search': typeof SearchRoute
@@ -65,6 +93,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/browse': typeof BrowseRoute
+  '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
+  '/lotteries': typeof LotteriesRoute
   '/map': typeof MapRoute
   '/pricing': typeof PricingRoute
   '/search': typeof SearchRoute
@@ -75,6 +107,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/browse': typeof BrowseRoute
+  '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
+  '/lotteries': typeof LotteriesRoute
   '/map': typeof MapRoute
   '/pricing': typeof PricingRoute
   '/search': typeof SearchRoute
@@ -86,6 +122,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/browse'
+    | '/dashboard'
+    | '/login'
+    | '/lotteries'
     | '/map'
     | '/pricing'
     | '/search'
@@ -95,6 +135,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/browse'
+    | '/dashboard'
+    | '/login'
+    | '/lotteries'
     | '/map'
     | '/pricing'
     | '/search'
@@ -104,6 +148,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/browse'
+    | '/dashboard'
+    | '/login'
+    | '/lotteries'
     | '/map'
     | '/pricing'
     | '/search'
@@ -114,6 +162,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  BrowseRoute: typeof BrowseRoute
+  DashboardRoute: typeof DashboardRoute
+  LoginRoute: typeof LoginRoute
+  LotteriesRoute: typeof LotteriesRoute
   MapRoute: typeof MapRoute
   PricingRoute: typeof PricingRoute
   SearchRoute: typeof SearchRoute
@@ -142,6 +194,34 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lotteries': {
+      id: '/lotteries'
+      path: '/lotteries'
+      fullPath: '/lotteries'
+      preLoaderRoute: typeof LotteriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -178,6 +258,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  BrowseRoute: BrowseRoute,
+  DashboardRoute: DashboardRoute,
+  LoginRoute: LoginRoute,
+  LotteriesRoute: LotteriesRoute,
   MapRoute: MapRoute,
   PricingRoute: PricingRoute,
   SearchRoute: SearchRoute,
