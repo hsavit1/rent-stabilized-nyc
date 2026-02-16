@@ -1,0 +1,36 @@
+{
+  "name": "Deactivate Stale Listings",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 24 }]
+        }
+      },
+      "id": "schedule",
+      "name": "Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE scraped_listing SET is_active = false, updated_at = now() WHERE is_active = true AND source = 'craigslist' AND last_seen_at < now() - interval '5 days'; UPDATE scraped_listing SET is_active = false, updated_at = now() WHERE is_active = true AND source = 'leasebreak' AND last_seen_at < now() - interval '14 days';",
+        "options": {}
+      },
+      "id": "deactivate",
+      "name": "Mark Stale as Inactive",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [220, 0],
+      "credentials": {
+        "postgres": { "id": "CONFIGURE_ME", "name": "Neon PostgreSQL" }
+      }
+    }
+  ],
+  "connections": {
+    "Daily": { "main": [[{ "node": "Mark Stale as Inactive", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

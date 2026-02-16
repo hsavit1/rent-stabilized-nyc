@@ -1,0 +1,30 @@
+app = 'rent-stabilized-n8n'
+primary_region = 'ewr'
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  N8N_PORT = "5678"
+  N8N_PROTOCOL = "https"
+  GENERIC_TIMEZONE = "America/New_York"
+  N8N_DIAGNOSTICS_ENABLED = "false"
+  N8N_PERSONALIZATION_ENABLED = "false"
+  NODE_FUNCTION_ALLOW_EXTERNAL = "puppeteer"
+
+[http_service]
+  internal_port = 5678
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+[mounts]
+  source = "n8n_data"
+  destination = "/home/node/.n8n"
+
+[[vm]]
+  memory = '1024mb'
+  cpu_kind = 'shared'
+  cpus = 1

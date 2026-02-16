@@ -1,0 +1,68 @@
+{
+  "name": "Scrape LeaseBreak NYC Listings",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 6 }]
+        }
+      },
+      "id": "schedule",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Scrape LeaseBreak in a real browser to reduce bot blocks\nconst puppeteer = require('puppeteer');\n\nconst normalizeDate = (input) => {\n  if (!input || typeof input !== 'string') return null;\n  const cleaned = input.trim();\n  if (!cleaned) return null;\n  const parsed = new Date(cleaned);\n  if (Number.isNaN(parsed.getTime())) return null;\n  return parsed.toISOString().slice(0, 10);\n};\n\nconst browser = await puppeteer.launch({\n  headless: 'new',\n  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',\n  args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']\n});\n\ntry {\n  const page = await browser.newPage();\n  await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');\n\n  const listings = [];\n\n  for (let pageNum = 1; pageNum <= 3; pageNum++) {\n    const url = `https://www.leasebreak.com/listings?city=new-york&page=${pageNum}`;\n    await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });\n\n    await page.waitForSelector('a[href*=\"/listing\"], a[href*=\"/property\"]', { timeout: 12000 }).catch(() => null);\n\n    const pageListings = await page.evaluate(() => {\n      const items = [];\n      const cards = document.querySelectorAll('.listing-card, .property-card, [class*=ListingCard], [data-listing]');\n      const elements = cards.length > 0 ? cards : document.querySelectorAll('a[href*=\"/listing\"], a[href*=\"/property\"]');\n\n      elements.forEach((el) => {\n        const link = el.tagName === 'A' ? el : el.querySelector('a');\n        const href = link?.getAttribute('href');\n        if (!href) return;\n\n        const fullUrl = href.startsWith('http') ? href : `https://www.leasebreak.com${href}`;\n        const text = (el.textContent || '').replace(/\\s+/g, ' ').trim();\n\n        const titleEl = el.querySelector('h2, h3, h4, [class*=title], [class*=Title], [class*=address], [class*=Address]');\n        const title = titleEl?.textContent?.trim() || text.substring(0, 100).trim();\n\n        const priceEl = el.querySelector('[class*=price], [class*=Price], [class*=rent], [class*=Rent]');\n        const priceText = priceEl?.textContent || text;\n        const priceMatch = priceText.match(/\\$([\\d,]+)/);\n        const price = priceMatch ? parseInt(priceMatch[1].replace(/,/g, ''), 10) : null;\n\n        const brMatch = text.match(/(\\d+)\\s*(?:bed|br|bedroom)/i) || text.match(/studio/i);\n        const bedrooms = brMatch ? (brMatch[0].toLowerCase().includes('studio') ? 0 : parseInt(brMatch[1], 10)) : null;\n\n        const neighborhoodEl = el.querySelector('[class*=neighborhood], [class*=Neighborhood], [class*=location], [class*=Location]');\n        const neighborhood = neighborhoodEl?.textContent?.trim() || null;\n\n        const dateMatch = text.match(/(?:lease\\s*end|available\\s*(?:until|through)|ends?)\\s*(\\d{1,2}\\/\\d{1,2}\\/\\d{2,4}|\\w+\\s+\\d{1,2},?\\s*\\d{4})/i);\n        const leaseEndDate = dateMatch ? dateMatch[1] : null;\n\n        const slugMatch = fullUrl.match(/\\/listing[s]?\\/([^/?]+)/);\n        const externalId = slugMatch ? slugMatch[1] : null;\n\n        if (title && title.length > 3) {\n          items.push({\n            url: fullUrl,\n            title,\n            price,\n            bedrooms,\n            neighborhood,\n            lease_end_date: leaseEndDate,\n            external_id: externalId\n          });\n        }\n      });\n\n      return items;\n    });\n\n    listings.push(...pageListings);\n    await new Promise((resolve) => setTimeout(resolve, 1500));\n  }\n\n  await browser.close();\n\n  const seen = new Set();\n  const unique = listings.filter((l) => {\n    if (!l.url || seen.has(l.url)) return false;\n    seen.add(l.url);\n    return true;\n  });\n\n  const output = unique.map((l) => {\n    let borough = null;\n    const nh = (l.neighborhood || l.title || '').toLowerCase();\n    if (/manhattan|midtown|harlem|village|soho|tribeca|chelsea|uws|ues|les|fidi|murray hill|gramercy/.test(nh)) borough = 'Manhattan';\n    else if (/brooklyn|williamsburg|bushwick|bed-stuy|park slope|crown heights|greenpoint|flatbush|dumbo/.test(nh)) borough = 'Brooklyn';\n    else if (/queens|astoria|lic|long island city|flushing|jackson heights/.test(nh)) borough = 'Queens';\n    else if (/bronx|riverdale|fordham|mott haven/.test(nh)) borough = 'Bronx';\n    else if (/staten island/.test(nh)) borough = 'Staten Island';\n\n    return {\n      json: {\n        source: 'leasebreak',\n        external_id: l.external_id,\n        url: l.url,\n        title: l.title,\n        price: l.price,\n        bedrooms: l.bedrooms,\n        neighborhood: l.neighborhood,\n        borough,\n        lease_type: 'lease_break',\n        lease_end_date: normalizeDate(l.lease_end_date),\n        is_active: true\n      }\n    };\n  });\n\n  return output.length > 0 ? output : [{ json: { _skip: true } }];\n} catch (err) {\n  await browser.close();\n  return [{ json: { _skip: true, error: err.message } }];\n}"
+      },
+      "id": "scrape_lb",
+      "name": "Scrape LeaseBreak (Puppeteer)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEqual" }
+            }
+          ]
+        }
+      },
+      "id": "filter_empty",
+      "name": "Filter Empty",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO scraped_listing (source, external_id, url, title, price, bedrooms, neighborhood, borough, lease_type, lease_end_date, is_active, last_seen_at, raw_data) VALUES ('{{ $json.source }}', {{ $json.external_id ? \"'\" + $json.external_id + \"'\" : 'NULL' }}, '{{ $json.url.replace(/'/g, \"''\") }}', '{{ $json.title.replace(/'/g, \"''\") }}', {{ $json.price || 'NULL' }}, {{ $json.bedrooms ?? 'NULL' }}, {{ $json.neighborhood ? \"'\" + $json.neighborhood.replace(/'/g, \"''\") + \"'\" : 'NULL' }}, {{ $json.borough ? \"'\" + $json.borough + \"'\" : 'NULL' }}, {{ $json.lease_type ? \"'\" + $json.lease_type + \"'\" : 'NULL' }}, {{ $json.lease_end_date ? \"'\" + $json.lease_end_date + \"'\" : 'NULL' }}, true, now(), '{{ JSON.stringify($json).replace(/'/g, \"''\") }}'::jsonb) ON CONFLICT (url) DO UPDATE SET external_id = COALESCE(EXCLUDED.external_id, scraped_listing.external_id), title = EXCLUDED.title, price = COALESCE(EXCLUDED.price, scraped_listing.price), bedrooms = COALESCE(EXCLUDED.bedrooms, scraped_listing.bedrooms), neighborhood = COALESCE(EXCLUDED.neighborhood, scraped_listing.neighborhood), borough = COALESCE(EXCLUDED.borough, scraped_listing.borough), lease_type = COALESCE(EXCLUDED.lease_type, scraped_listing.lease_type), lease_end_date = COALESCE(EXCLUDED.lease_end_date, scraped_listing.lease_end_date), is_active = true, last_seen_at = now(), raw_data = EXCLUDED.raw_data, updated_at = now()",
+        "options": {}
+      },
+      "id": "insert_db",
+      "name": "Upsert to Neon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [660, 0],
+      "credentials": {
+        "postgres": { "id": "CONFIGURE_ME", "name": "Neon PostgreSQL" }
+      }
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": { "main": [[{ "node": "Scrape LeaseBreak (Puppeteer)", "type": "main", "index": 0 }]] },
+    "Scrape LeaseBreak (Puppeteer)": { "main": [[{ "node": "Filter Empty", "type": "main", "index": 0 }]] },
+    "Filter Empty": { "main": [[{ "node": "Upsert to Neon", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,84 @@
+{
+  "name": "Curate Affordable Listings",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 2 }]
+        }
+      },
+      "id": "schedule",
+      "name": "Every 2 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, source, url, title, price, bedrooms, neighborhood, borough, lease_type, posted_at, curation_status FROM scraped_listing WHERE is_active = true AND (curation_status IS NULL OR curation_status IN ('pending_review', 'auto_approved', 'rejected')) AND (affordability_score IS NULL OR updated_at > now() - interval '12 hours' OR last_seen_at > now() - interval '12 hours') ORDER BY last_seen_at DESC LIMIT 500",
+        "options": {}
+      },
+      "id": "fetch_candidates",
+      "name": "Fetch Curation Candidates",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [220, 0],
+      "credentials": {
+        "postgres": { "id": "CONFIGURE_ME", "name": "Neon PostgreSQL" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map((i) => i.json).filter((r) => r.id);\nif (rows.length === 0) return [{ json: { _skip: true } }];\n\nconst caps = {\n  Manhattan: [2200, 2800, 3400, 4000, 4600],\n  Brooklyn: [2000, 2600, 3200, 3800, 4400],\n  Queens: [1800, 2400, 3000, 3600, 4200],\n  Bronx: [1600, 2100, 2700, 3300, 3900],\n  'Staten Island': [1700, 2300, 2900, 3500, 4100]\n};\n\nconst fallbackCaps = [1900, 2500, 3100, 3700, 4300];\n\nconst getCap = (borough, bedrooms) => {\n  const idx = Math.min(Math.max(Number.isFinite(bedrooms) ? bedrooms : 0, 0), 4);\n  const boroughCaps = caps[borough] || fallbackCaps;\n  return boroughCaps[idx];\n};\n\nconst daysSince = (isoDate) => {\n  if (!isoDate) return null;\n  const d = new Date(isoDate);\n  if (Number.isNaN(d.getTime())) return null;\n  return (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24);\n};\n\nconst keywordBonuses = [\n  { regex: /rent\\s*stabilized/i, bonus: 20, reason: 'rent_stabilized_keyword' },\n  { regex: /income\\s*restricted|affordable\\s*housing/i, bonus: 12, reason: 'affordable_keyword' },\n  { regex: /lease\\s*(break|takeover)|sublet/i, bonus: 6, reason: 'flexible_lease_keyword' }\n];\n\nreturn rows.map((row) => {\n  let score = 0;\n  const reasons = [];\n\n  const titleText = String(row.title || '');\n  const price = row.price != null ? Number(row.price) : null;\n  const bedrooms = row.bedrooms != null ? Number(row.bedrooms) : 0;\n  const cap = getCap(row.borough, bedrooms);\n\n  if (price == null || Number.isNaN(price)) {\n    score += 20;\n    reasons.push('missing_price_manual_review');\n  } else {\n    if (price <= cap * 0.75) {\n      score += 82;\n      reasons.push('price_well_below_cap');\n    } else if (price <= cap) {\n      score += 70;\n      reasons.push('price_within_cap');\n    } else if (price <= cap * 1.1) {\n      score += 55;\n      reasons.push('price_slightly_above_cap');\n    } else if (price <= cap * 1.25) {\n      score += 38;\n      reasons.push('price_above_cap');\n    } else {\n      score += 18;\n      reasons.push('price_far_above_cap');\n    }\n  }\n\n  if (bedrooms === 0) {\n    score += 4;\n    reasons.push('studio_bonus');\n  }\n\n  if (row.lease_type === 'lease_break') {\n    score += 5;\n    reasons.push('lease_break_bonus');\n  }\n\n  const ageDays = daysSince(row.posted_at);\n  if (ageDays != null && ageDays <= 7) {\n    score += 8;\n    reasons.push('fresh_listing_bonus');\n  }\n\n  keywordBonuses.forEach((rule) => {\n    if (rule.regex.test(titleText)) {\n      score += rule.bonus;\n      reasons.push(rule.reason);\n    }\n  });\n\n  score = Math.max(0, Math.min(100, Math.round(score)));\n\n  const affordableFlag = score >= 70;\n  let curationStatus = 'rejected';\n\n  if (score >= 85) curationStatus = 'auto_approved';\n  else if (score >= 70 || price == null) curationStatus = 'pending_review';\n\n  return {\n    json: {\n      id: row.id,\n      affordability_score: score,\n      affordable_flag: affordableFlag,\n      monthly_income_required: price != null && Number.isFinite(price) ? Math.round(price * 40) : null,\n      affordable_reason: reasons.slice(0, 6).join(','),\n      curation_status: curationStatus\n    }\n  };\n});"
+      },
+      "id": "score_affordability",
+      "name": "Score Affordability",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEqual" }
+            }
+          ]
+        }
+      },
+      "id": "filter_empty",
+      "name": "Filter Empty",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE scraped_listing SET affordability_score = {{ $json.affordability_score }}, affordable_flag = {{ $json.affordable_flag ? 'true' : 'false' }}, affordable_reason = {{ $json.affordable_reason ? \"'\" + $json.affordable_reason.replace(/'/g, \"''\") + \"'\" : 'NULL' }}, monthly_income_required = {{ $json.monthly_income_required ?? 'NULL' }}, curation_status = '{{ $json.curation_status }}', curated_at = CASE WHEN '{{ $json.curation_status }}' IN ('auto_approved', 'approved', 'rejected') THEN now() ELSE NULL END, updated_at = now() WHERE id = '{{ $json.id }}'",
+        "options": {}
+      },
+      "id": "save_score",
+      "name": "Persist Curation Score",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [880, 0],
+      "credentials": {
+        "postgres": { "id": "CONFIGURE_ME", "name": "Neon PostgreSQL" }
+      }
+    }
+  ],
+  "connections": {
+    "Every 2 Hours": { "main": [[{ "node": "Fetch Curation Candidates", "type": "main", "index": 0 }]] },
+    "Fetch Curation Candidates": { "main": [[{ "node": "Score Affordability", "type": "main", "index": 0 }]] },
+    "Score Affordability": { "main": [[{ "node": "Filter Empty", "type": "main", "index": 0 }]] },
+    "Filter Empty": { "main": [[{ "node": "Persist Curation Score", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

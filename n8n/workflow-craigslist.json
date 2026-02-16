@@ -1,0 +1,82 @@
+{
+  "name": "Scrape Craigslist NYC Apartments",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 30 }]
+        }
+      },
+      "id": "schedule",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://newyork.craigslist.org/search/apa?format=rss&max_price=4000&availabilityMode=0&query=rent+stabilized+OR+lease+takeover+OR+stabilized",
+        "options": {
+          "response": { "response": { "responseFormat": "text" } }
+        }
+      },
+      "id": "fetch_rss",
+      "name": "Fetch CL RSS Feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse RSS XML into listing objects\nconst xml = $input.first().json.data;\nconst items = [];\n\nconst itemRegex = /<item>(.*?)<\\/item>/gs;\nlet match;\n\nconst parseIsoTimestamp = (raw) => {\n  if (!raw) return null;\n  const d = new Date(raw);\n  if (Number.isNaN(d.getTime())) return null;\n  return d.toISOString();\n};\n\nwhile ((match = itemRegex.exec(xml)) !== null) {\n  const itemXml = match[1];\n\n  const getTag = (tag) => {\n    const m = itemXml.match(new RegExp(`<${tag}[^>]*><!\\\\[CDATA\\\\[(.+?)\\\\]\\\\]><\\/${tag}>|<${tag}[^>]*>(.+?)<\\/${tag}>`, 's'));\n    return m ? (m[1] || m[2] || '').trim() : null;\n  };\n\n  const title = getTag('title');\n  const link = getTag('link');\n  const description = getTag('description');\n  const pubDate = getTag('dc:date') || getTag('pubDate');\n\n  const lat = itemXml.match(/<geo:lat>([^<]+)<\\/geo:lat>/);\n  const lng = itemXml.match(/<geo:long>([^<]+)<\\/geo:long>/);\n\n  const priceMatch = title?.match(/\\$([\\d,]+)/);\n  const price = priceMatch ? parseInt(priceMatch[1].replace(/,/g, ''), 10) : null;\n\n  const brMatch = title?.match(/(\\d+)br/);\n  const bedrooms = brMatch ? parseInt(brMatch[1], 10) : null;\n\n  const sqftMatch = title?.match(/(\\d+)ft2/);\n  const sqft = sqftMatch ? parseInt(sqftMatch[1], 10) : null;\n\n  const parts = title?.split(' - ');\n  const neighborhood = parts && parts.length > 1 ? parts[parts.length - 1].trim() : null;\n\n  const idMatch = link?.match(/(\\d+)\\.html/);\n  const externalId = idMatch ? idMatch[1] : null;\n\n  let borough = null;\n  const nh = (neighborhood || '').toLowerCase();\n  if (/manhattan|midtown|harlem|village|soho|tribeca|chelsea|uws|ues|les|fidi|murray hill|gramercy|hells kitchen|upper east|upper west|lower east|east village|west village|nolita|chinatown|flatiron|kips bay/.test(nh)) borough = 'Manhattan';\n  else if (/brooklyn|williamsburg|bushwick|bed-stuy|bedford|park slope|crown heights|greenpoint|flatbush|dumbo|prospect|sunset park|bay ridge|bensonhurst|cobble hill|boerum|carroll gardens|red hook|fort greene|clinton hill/.test(nh)) borough = 'Brooklyn';\n  else if (/queens|astoria|lic|long island city|flushing|jackson heights|elmhurst|woodside|sunnyside|ridgewood|forest hills|rego park|jamaica|kew gardens/.test(nh)) borough = 'Queens';\n  else if (/bronx|riverdale|fordham|mott haven|concourse|pelham|kingsbridge|morris/.test(nh)) borough = 'Bronx';\n  else if (/staten island|st george|tottenville/.test(nh)) borough = 'Staten Island';\n\n  if (link) {\n    items.push({\n      json: {\n        source: 'craigslist',\n        external_id: externalId,\n        url: link,\n        title: title || 'Untitled',\n        price,\n        bedrooms,\n        sqft,\n        neighborhood,\n        borough,\n        latitude: lat ? parseFloat(lat[1]) : null,\n        longitude: lng ? parseFloat(lng[1]) : null,\n        description: description?.substring(0, 2000) || null,\n        posted_at: parseIsoTimestamp(pubDate),\n        is_active: true\n      }\n    });\n  }\n}\n\nreturn items.length > 0 ? items : [{ json: { _skip: true } }];"
+      },
+      "id": "parse_rss",
+      "name": "Parse RSS Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEqual" }
+            }
+          ]
+        }
+      },
+      "id": "filter_empty",
+      "name": "Filter Empty",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO scraped_listing (source, external_id, url, title, price, bedrooms, sqft, neighborhood, borough, latitude, longitude, description, posted_at, is_active, last_seen_at, raw_data) VALUES ('{{ $json.source }}', {{ $json.external_id ? \"'\" + $json.external_id + \"'\" : 'NULL' }}, '{{ $json.url.replace(/'/g, \"''\") }}', '{{ $json.title.replace(/'/g, \"''\") }}', {{ $json.price || 'NULL' }}, {{ $json.bedrooms ?? 'NULL' }}, {{ $json.sqft || 'NULL' }}, {{ $json.neighborhood ? \"'\" + $json.neighborhood.replace(/'/g, \"''\") + \"'\" : 'NULL' }}, {{ $json.borough ? \"'\" + $json.borough + \"'\" : 'NULL' }}, {{ $json.latitude || 'NULL' }}, {{ $json.longitude || 'NULL' }}, {{ $json.description ? \"'\" + $json.description.replace(/'/g, \"''\").substring(0, 2000) + \"'\" : 'NULL' }}, {{ $json.posted_at ? \"'\" + $json.posted_at + \"'\" : 'NULL' }}, true, now(), '{{ JSON.stringify($json).replace(/'/g, \"''\") }}'::jsonb) ON CONFLICT (url) DO UPDATE SET external_id = COALESCE(EXCLUDED.external_id, scraped_listing.external_id), title = EXCLUDED.title, price = COALESCE(EXCLUDED.price, scraped_listing.price), bedrooms = COALESCE(EXCLUDED.bedrooms, scraped_listing.bedrooms), sqft = COALESCE(EXCLUDED.sqft, scraped_listing.sqft), neighborhood = COALESCE(EXCLUDED.neighborhood, scraped_listing.neighborhood), borough = COALESCE(EXCLUDED.borough, scraped_listing.borough), latitude = COALESCE(EXCLUDED.latitude, scraped_listing.latitude), longitude = COALESCE(EXCLUDED.longitude, scraped_listing.longitude), description = COALESCE(EXCLUDED.description, scraped_listing.description), posted_at = COALESCE(EXCLUDED.posted_at, scraped_listing.posted_at), is_active = true, last_seen_at = now(), raw_data = EXCLUDED.raw_data, updated_at = now()",
+        "options": {}
+      },
+      "id": "insert_db",
+      "name": "Upsert to Neon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [880, 0],
+      "credentials": {
+        "postgres": { "id": "CONFIGURE_ME", "name": "Neon PostgreSQL" }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": { "main": [[{ "node": "Fetch CL RSS Feed", "type": "main", "index": 0 }]] },
+    "Fetch CL RSS Feed": { "main": [[{ "node": "Parse RSS Items", "type": "main", "index": 0 }]] },
+    "Parse RSS Items": { "main": [[{ "node": "Filter Empty", "type": "main", "index": 0 }]] },
+    "Filter Empty": { "main": [[{ "node": "Upsert to Neon", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
